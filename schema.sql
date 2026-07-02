@@ -96,3 +96,17 @@ CREATE TABLE IF NOT EXISTS payment_product (
     UNIQUE (record_id, product_number),
     CHECK (product_number BETWEEN 1 AND 5)
 );
+
+-- Indexes aligned to the pipeline and the analytical queries.
+CREATE INDEX IF NOT EXISTS idx_stg_state                   ON stg_general_payments(recipient_state);
+CREATE INDEX IF NOT EXISTS idx_stg_program_year            ON stg_general_payments(program_year);
+CREATE INDEX IF NOT EXISTS idx_payment_manufacturer        ON payment(manufacturer_id);
+CREATE INDEX IF NOT EXISTS idx_payment_recipient           ON payment(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_payment_nature              ON payment(nature_of_payment);
+CREATE INDEX IF NOT EXISTS idx_payment_amount              ON payment(payment_amount);
+CREATE INDEX IF NOT EXISTS idx_payment_program_year_amount ON payment(program_year, payment_amount);
+CREATE INDEX IF NOT EXISTS idx_payment_date                ON payment(payment_date);
+CREATE INDEX IF NOT EXISTS idx_recipient_state             ON recipient(recipient_state);
+CREATE INDEX IF NOT EXISTS idx_recipient_state_specialty   ON recipient(recipient_state, primary_specialty);
+CREATE INDEX IF NOT EXISTS idx_product_record              ON payment_product(record_id);
+CREATE INDEX IF NOT EXISTS idx_product_name                ON payment_product(product_name);
