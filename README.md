@@ -302,6 +302,8 @@ that would change at production scale — intentionally *not* built here — are
 python3 -m pytest -q
 ```
 
+CI (GitHub Actions) runs this suite on every push; a failing test fails the build.
+
 Covers the transform logic (type/date parsing, column renames, `raw_payload`, row
 dropping), the staging→final build (row counts, recipient keys, product explode,
 no duplicate `record_id`, idempotency), the data quality checks, the extract
