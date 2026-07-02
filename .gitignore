@@ -6,7 +6,6 @@ __pycache__/
 # OS
 .DS_Store
 
-# huge database file
-data/*data/*.db
-data/*.db-wal
-data/*.db-shm
+# database huge files
+data/*
+!data/.gitkeep
