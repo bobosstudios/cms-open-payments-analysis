@@ -78,10 +78,8 @@ A few deliberate choices:
 - **Staging vs final.** `stg_general_payments` is a source-shaped landing area.
   A `dq_flags` column records any row-level quality concerns, and `raw_payload`
   keeps the original row as JSON **only for flagged rows** (clean rows store
-  `NULL`) — so the source is preserved for exactly the rows worth inspecting without bloating the table. Each normal run is a **full refresh**: staging is cleared and reloaded with exactly the requested
-  states/limit, and the final tables are then **rebuilt from staging**. So a run
-  always reflects precisely the slice you asked for — you can change `--states`
-  between runs freely without mixing scopes. (`--reuse-staging` skips the refresh and rebuilds finals from whatever is already staged.)
+  `NULL`), so the source is preserved for exactly the rows worth inspecting without bloating the table. Each normal run is a **full refresh**: staging is cleared and reloaded with exactly the requested states/limit, and the final tables are then **rebuilt from staging**. So a run
+  always reflects precisely the slice you asked for — you can change `--states` between runs freely without mixing scopes. (`--reuse-staging` skips the refresh and rebuilds finals from whatever is already staged.)
   *Design note:* a scoped full refresh is the right trade-off for a local,CLI-driven SQLite tool — it keeps the database and outputs aligned with the run
   parameters and avoids stale-data footguns. In a production pipeline you'd
   instead keep an append-only raw/staging layer with run metadata and
@@ -108,7 +106,7 @@ A few deliberate choices:
   additional specialty fields could be normalized into a `recipient_specialty`
   table as a future improvement.
 
-  ## Scope
+## Scope
 
 By default, the pipeline analyzes records for **Texas and New York**, limited to
 **250,000 records** for local SQLite performance. The state list and record limit
@@ -267,13 +265,13 @@ WHERE dq_flags IS NOT NULL GROUP BY dq_flags;
   otherwise clean for the fields we use.
 
 
-  ## Production Considerations
+## Production Considerations
 
 This project is deliberately scoped for a local, reproducible take-home: it streams
 a bounded slice with connect-level retries into a single SQLite file. The choices
-that would change at production scale — intentionally *not* built here — are:
+that would change at production scale intentionally *not* built here are:
 
-- **Orchestration.** Run the ETL as an Airflow DAG — the extract, staging load,
+- **Orchestration.** Run the ETL as an Airflow DAG: the extract, staging load,
   data-quality, build, and analysis steps map cleanly to tasks — with scheduling,
   retries, alerting, and backfills, instead of a single CLI entrypoint.
 - **Incremental / CDC loads.** Replace the full refresh with incremental loads keyed
