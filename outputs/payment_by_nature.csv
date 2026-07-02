@@ -1,8 +1,16 @@
 nature_of_payment,payment_count,total_payment_amount,avg_payment_amount
-"Compensation for services other than consulting, including serving as faculty or as a speaker at a venue other than a continuing education program",36,73520.5,2042.24
-Food and Beverage,1863,67376.67,36.17
-Consulting Fee,20,40892.5,2044.63
-Travel and Lodging,59,26525.51,449.58
-Education,18,1512.57,84.03
-Gift,3,474.77,158.26
-Space rental or facility fees (teaching hospital only),1,330.0,330.0
+"Compensation for services other than consulting, including serving as faculty or as a speaker at a venue other than a continuing education program",4043,11248775.07,2782.28
+Consulting Fee,3237,10384642.74,3208.11
+Food and Beverage,228958,7196557.71,31.43
+Royalty or License,200,7185482.63,35927.41
+Travel and Lodging,9519,3456566.76,363.12
+Honoraria,424,1254948.37,2959.78
+Grant,125,1198685.53,9589.48
+Debt forgiveness,131,1158697.9,8845.02
+Education,2310,1158587.07,501.55
+Compensation for serving as faculty or as a speaker for a medical education program,255,606735.55,2379.36
+Long term medical supply or device loan,274,513812.86,1875.23
+Acquisitions,11,404133.96,36739.45
+Space rental or facility fees (teaching hospital only),76,233121.08,3067.38
+Gift,344,64479.67,187.44
+Charitable Contribution,4,11334.0,2833.5
