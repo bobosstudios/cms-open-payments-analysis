@@ -1,5 +1,9 @@
-"""
-DQ
+"""Lightweight data quality checks for the staging and final layers.
+
+Deliberately plain SQL/Python rather than a heavy framework. Checks come in two
+flavours: **critical** checks raise and stop the run (they would make the analysis
+unreliable), while **warnings** are logged and allow the run to continue (public
+CMS records legitimately have some missing descriptive fields).
 """
 from __future__ import annotations
 import logging
@@ -69,7 +73,7 @@ def run_staging_quality_checks(conn: sqlite3.Connection, states: list[str]) -> N
         "WHERE (covered_recipient_profile_id IS NULL OR TRIM(covered_recipient_profile_id) = '') "
         "AND (teaching_hospital_id IS NULL OR TRIM(teaching_hospital_id) = '')",
     )
-    # flags raw -> stag
+    # Rows whose source was retained (raw_payload) because a row-level flag tripped.
     flagged = conn.execute(
         "SELECT COUNT(*) FROM stg_general_payments WHERE dq_flags IS NOT NULL"
     ).fetchone()[0]

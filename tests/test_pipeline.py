@@ -1,3 +1,9 @@
+"""Tests for the transform, the staging->final build, and data quality.
+
+Transform tests run against small fixture rows (no network). The build/DQ tests
+create a temporary SQLite database from the real schema, stage the fixtures, and
+build the final tables, then check counts, keys, idempotency, and the checks.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +13,7 @@ import pytest
 
 from src import analysis, config, data_quality, extract, load, transform
 
-# source column names
+# A physician food-and-beverage payment with one product (source column names).
 PHYSICIAN_ROW = {
     "record_id": "1157125359",
     "change_type": "NEW",
@@ -38,7 +44,7 @@ PHYSICIAN_ROW = {
     "indicate_drug_or_biological_or_device_or_medical_supply_1": "Device",
 }
 
-# A teaching-hospital
+# A teaching-hospital row: no profile id, keyed by teaching_hospital_id, no product.
 HOSPITAL_ROW = {
     "record_id": "2000000001",
     "covered_recipient_type": "Covered Recipient Teaching Hospital",
@@ -54,33 +60,33 @@ HOSPITAL_ROW = {
 }
 
 
-
+# transform
 def test_to_staging_row_parses_types_and_dates():
     row = transform.to_staging_row(PHYSICIAN_ROW)
     assert row is not None
-    assert row["total_amount_of_payment_usdollars"] == 119.0 
-    assert row["number_of_payments"] == 1 
+    assert row["total_amount_of_payment_usdollars"] == 119.0 # string -> float
+    assert row["number_of_payments"] == 1 # string -> int
     assert row["program_year"] == 2025
-    assert row["date_of_payment"] == "2025-05-01"
+    assert row["date_of_payment"] == "2025-05-01" # MM/DD/YYYY -> ISO
     assert row["payment_publication_date"] == "2026-06-30"
 
 
 def test_to_staging_row_renames_columns():
     row = transform.to_staging_row(PHYSICIAN_ROW)
-    assert row["manufacturer_id"] == "100000191758" 
+    assert row["manufacturer_id"] == "100000191758" # renamed from the long source name
     assert row["product_name_1"] == "Shockwave C2 Catheter"
     assert row["product_type_1"] == "Device"
 
 
 def test_clean_row_stores_no_raw_payload():
-    row = transform.to_staging_row(PHYSICIAN_ROW)
+    row = transform.to_staging_row(PHYSICIAN_ROW) # a complete, clean row
     assert row["dq_flags"] is None
     assert row["raw_payload"] is None
 
 
 def test_flagged_row_keeps_raw_payload():
     flagged = dict(PHYSICIAN_ROW)
-    flagged["applicable_manufacturer_or_applicable_gpo_making_payment_id"] = ""
+    flagged["applicable_manufacturer_or_applicable_gpo_making_payment_id"] = "" # missing id
     row = transform.to_staging_row(flagged)
     assert "missing_manufacturer_id" in row["dq_flags"]
     assert json.loads(row["raw_payload"])["record_id"] == "1157125359"
@@ -90,7 +96,7 @@ def test_to_staging_row_drops_rows_without_id_or_amount():
     assert transform.to_staging_row({"record_id": "", "total_amount_of_payment_usdollars": "5"}) is None
     assert transform.to_staging_row({"record_id": "1", "total_amount_of_payment_usdollars": ""}) is None
 
-
+#  build & data quality
 @pytest.fixture
 def db(tmp_path):
     """A fresh database built from the real schema, with the fixtures staged+built."""
@@ -109,7 +115,7 @@ def test_build_populates_final_tables(db):
     assert _count(db, "stg_general_payments") == 2
     assert _count(db, "payment") == 2
     assert _count(db, "manufacturer") == 2
-    assert _count(db, "payment_product") == 1
+    assert _count(db, "payment_product") == 1 # only the physician row has a product
 
 
 def test_recipient_keys(db):
@@ -129,13 +135,15 @@ def test_no_duplicate_record_ids(db):
 
 
 def test_pipeline_is_idempotent(db):
-    load.load_staging(db, [PHYSICIAN_ROW, HOSPITAL_ROW])
-    load.build_final_tables(db) 
+    load.load_staging(db, [PHYSICIAN_ROW, HOSPITAL_ROW]) # stage the same rows again
+    load.build_final_tables(db)  # rebuild
     assert _count(db, "payment") == 2
     assert _count(db, "payment_product") == 1
 
 
 def test_reset_staging_gives_full_refresh(db):
+    # Staging starts with the two fixtures; a reset + reload of one row should
+    # leave staging reflecting only that row (no leftovers from the prior scope).
     load.reset_staging(db)
     assert _count(db, "stg_general_payments") == 0
     load.load_staging(db, [HOSPITAL_ROW])
@@ -157,12 +165,14 @@ def test_staging_check_catches_negative_amount(tmp_path):
         data_quality.run_staging_quality_checks(conn, ["OH"])
     conn.close()
 
-
+#  extract (no network)
 class _FakeRaw(io.BytesIO):
+    """A binary stream that also allows setting decode_content (like urllib3's)."""
     decode_content = False
 
 
 class _FakeResponse:
+    """Minimal stand-in for a streaming requests.Response over in-memory CSV bytes."""
     def __init__(self, data: bytes):
         self.raw = _FakeRaw(data)
 
@@ -185,8 +195,8 @@ def test_download_records_filters_by_state(monkeypatch):
     monkeypatch.setattr(extract, "_get_with_retry", lambda session, url, **kw: _FakeResponse(csv_text.encode()))
 
     rows = list(extract.download_records(["TX"], max_records=10))
-    assert {r["record_id"] for r in rows} == {"1", "3"} 
-    assert all(r["recipient_state"] == "TX" for r in rows) 
+    assert {r["record_id"] for r in rows} == {"1", "3"} # only TX rows
+    assert all(r["recipient_state"] == "TX" for r in rows) # headers lowercased
 
 
 def test_analysis_writes_all_outputs(tmp_path):

@@ -1,3 +1,10 @@
+-- Q4. Which products (drugs/devices) are associated with the most payment value?
+-- Joins the payment fact to the payment_product child table, so it exercises the
+-- normalized product group. 
+-- Note: a payment can list several products, and the
+-- payment amount is not split across them — so this is the payment value
+-- associated with each product, and totals across products can exceed total
+-- spend. payment_count uses DISTINCT record_id to stay unambiguous.
 SELECT
     pp.product_name,
     pp.product_type,

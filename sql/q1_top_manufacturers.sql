@@ -1,3 +1,6 @@
+-- Q1. Which manufacturers have the largest financial footprint in the slice?
+-- Ranks making-payment entities by total dollars, with volume and average size
+-- for context.
 SELECT
     m.manufacturer_name,
     COUNT(*) AS payment_count,

@@ -1,3 +1,12 @@
+"""Stream General Payment records from the CMS Open Payments CSV distribution.
+
+CMS publishes each program year as a single flat CSV on a fast file server. For
+bulk ingestion this is far quicker and more reliable than the paginated datastore
+query API (which is meant for small lookups and degrades badly on deep offsets).
+We stream the file, filter to the requested recipient states on the fly, and stop
+once every state's record budget is filled — so we never download or hold more of
+the file than we need, and the raw file is never written to disk.
+"""
 from __future__ import annotations
 import csv
 import io
@@ -11,6 +20,12 @@ log = logging.getLogger(__name__)
 
 
 def _get_with_retry(session: requests.Session, url: str, attempts: int = 3, **kwargs) -> requests.Response:
+    """GET a URL, retrying transient network/HTTP errors with a short backoff.
+
+    Covers the flaky part of talking to a remote server — timeouts, dropped
+    connections, 5xx responses — when establishing a request (including opening
+    the CSV stream), so a transient blip doesn't sink the whole run.
+    """
     for attempt in range(1, attempts + 1):
         try:
             response = session.get(url, **kwargs)
@@ -26,6 +41,11 @@ def _get_with_retry(session: requests.Session, url: str, attempts: int = 3, **kw
 
 
 def resolve_csv_url(session: requests.Session) -> str:
+    """Look up the current CSV download URL from the dataset's metastore item.
+
+    The URL is versioned by publication date, so resolving it at runtime keeps the
+    pipeline working after CMS republishes the file.
+    """
     response = _get_with_retry(session, config.METASTORE_ITEM_URL, timeout=30)
     for distribution in response.json().get("distribution", []):
         data = distribution.get("data", distribution)
@@ -35,6 +55,11 @@ def resolve_csv_url(session: requests.Session) -> str:
 
 
 def download_records(states: list[str], max_records: int) -> Iterator[dict]:
+    """Yield raw payment records for the given states, up to ``max_records`` total.
+
+    The budget is split evenly across states so each state is represented. We read
+    the CSV as a stream and stop as soon as every state's quota is met.
+    """
     wanted = {state.upper() for state in states}
     per_state = max(1, max_records // len(wanted))
     matched = {state: 0 for state in wanted}
@@ -46,6 +71,8 @@ def download_records(states: list[str], max_records: int) -> Iterator[dict]:
 
     with _get_with_retry(session, csv_url, stream=True, timeout=(30, 300)) as response:
         response.raw.decode_content = True  # transparently handle gzip if present
+        # TextIOWrapper + csv.reader parse the byte stream correctly, including
+        # quoted fields that contain commas or newlines.
         text_stream = io.TextIOWrapper(response.raw, encoding="utf-8", errors="replace", newline="")
         reader = csv.reader(text_stream)
         header = [column.lower() for column in next(reader)]

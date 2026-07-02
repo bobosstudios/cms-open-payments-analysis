@@ -1,4 +1,13 @@
+"""CMS Open Payments ETL + analysis pipeline.
 
+Streams a state-based slice of the CMS Open Payments General Payment CSV, lands it
+in a staging table, builds normalized final tables from staging, runs data quality
+checks at each layer, and produces the analysis outputs.
+
+    python3 main.py                              # defaults: TX + NY, 250k records
+    python3 main.py --states TX NY CA --max-records 100000
+    python3 main.py --reuse-staging              # rebuild final tables + analysis only
+"""
 from __future__ import annotations
 
 import argparse

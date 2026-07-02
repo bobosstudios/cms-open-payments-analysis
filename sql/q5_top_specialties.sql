@@ -1,3 +1,6 @@
+-- Q5. Which recipient specialties receive the most payment value?
+-- Uses the recipient dimension's primary_specialty. Teaching hospitals and
+-- recipients without a reported specialty are excluded.
 SELECT
     r.primary_specialty,
     COUNT(*) AS payment_count,

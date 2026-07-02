@@ -1,3 +1,11 @@
+"""Run the analysis questions and write result tables and charts to outputs/.
+
+Q1–Q5 live in ``sql/*.sql`` (readable and reusable); this module executes each
+via pandas, prints a formatted table, and saves a CSV. Q5 (top specialties) is
+the pandas/matplotlib question and also renders a bar chart. A supporting
+log-scaled histogram of payment amounts is written alongside them.
+"""
+
 from __future__ import annotations
 import logging
 import sqlite3
@@ -12,11 +20,13 @@ from . import config
 log = logging.getLogger(__name__)
 
 
+# Each SQL question: (sql filename stem, output csv stem, human-readable title).
 SQL_QUESTIONS = [
     ("q1_top_manufacturers", "top_manufacturers", "Q1. Top manufacturers by total payment amount"),
     ("q2_payment_by_nature", "payment_by_nature", "Q2. Payment breakdown by nature of payment"),
     ("q3_payment_concentration", "payment_concentration", "Q3. Payment concentration (top 1% share)"),
     ("q4_top_products", "top_products", "Q4. Top products by total associated payment value"),
+    ("q5_top_specialties", "top_specialties", "Q5. Top recipient specialties by total received")
 ]
 
 
@@ -35,8 +45,8 @@ def _top_specialties(conn: sqlite3.Connection, output_dir: Path) -> Path:
     _report("Q5. Top recipient specialties by total received (pandas + chart)", frame)
     frame.to_csv(output_dir / "top_specialties.csv", index=False)
 
-    top = frame.head(10).iloc[::-1]
-    labels = top["primary_specialty"].str.slice(0, 45)
+    top = frame.head(10).iloc[::-1] # reverse so the largest bar is on top
+    labels = top["primary_specialty"].str.slice(0, 45) # specialty strings are long
     fig, ax = plt.subplots(figsize=(9, 6))
     ax.barh(labels, top["total_payment_amount"], color="#55A868")
     ax.set_xlabel("Total payment amount (USD)")

@@ -1,4 +1,10 @@
+"""Create the schema, load rows into staging, and build the final tables.
 
+Staging is the durable, idempotent checkpoint: rows land via ``INSERT OR IGNORE``
+keyed on ``record_id``, so re-running never duplicates them. The normalized final
+tables are then rebuilt from staging on every run (see build_final_tables.sql), so
+they always reflect the current staging contents.
+"""
 from __future__ import annotations
 
 import logging
@@ -9,7 +15,8 @@ from . import config, transform
 
 log = logging.getLogger(__name__)
 
-
+# Staging columns in insert order (loaded_at is omitted — it defaults to now).
+# Product columns are generated to match the schema and the transform output.
 _PRODUCT_FIELDS = [
     "product_name", 
     "product_category", 
@@ -37,6 +44,7 @@ _STAGING_INSERT = (
 
 
 def connect(db_path: Path = config.DB_PATH) -> sqlite3.Connection:
+    """Open a connection with foreign keys enforced and load-friendly pragmas."""
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
@@ -47,6 +55,7 @@ def connect(db_path: Path = config.DB_PATH) -> sqlite3.Connection:
 def create_database(
     db_path: Path = config.DB_PATH, schema_path: Path = config.SCHEMA_PATH
 ) -> sqlite3.Connection:
+    """Create the database file and apply ``schema.sql`` (idempotent)."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = connect(db_path)
     with conn:
@@ -56,6 +65,11 @@ def create_database(
 
 
 def reset_staging(conn: sqlite3.Connection) -> None:
+    """Empty the staging table so a run reflects exactly the requested slice.
+
+    Staging is loaded as a full refresh: each normal run clears it and reloads
+    the chosen states/limit, so changing --states between runs never mixes scopes.
+    """
     with conn:
         conn.execute("DELETE FROM stg_general_payments")
     log.info("Cleared staging table")
@@ -64,6 +78,11 @@ def reset_staging(conn: sqlite3.Connection) -> None:
 def load_staging(
     conn: sqlite3.Connection, raw_rows: Iterable[dict], batch_size: int = 1000
 ) -> int:
+    """Normalize raw rows and load them into staging in batched transactions.
+
+    Returns the number of rows staged. Rows missing a record_id or amount are
+    skipped and logged.
+    """
     batch: list[tuple] = []
     staged = 0
     skipped = 0

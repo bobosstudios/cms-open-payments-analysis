@@ -1,3 +1,10 @@
+-- Q3. How concentrated is total spend?
+-- Bucket every payment into 100 equal-count groups ordered by amount, then
+-- report what share of total dollars falls in the top 1% of payments. A high
+-- share means spend is driven by a small number of large transfers.
+--
+-- The grand total is computed in the same pass with SUM() OVER (), so the
+-- payment table is scanned once.
 WITH ranked_payments AS (
     SELECT
         payment_amount,

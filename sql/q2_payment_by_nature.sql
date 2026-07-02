@@ -1,3 +1,7 @@
+-- Q2. How does spend break down by the nature of the payment?
+-- Comparing total dollars against payment count separates the many small
+-- transactions (e.g. food and beverage) from the fewer high-value ones
+-- (e.g. consulting or royalties).
 SELECT
     p.nature_of_payment,
     COUNT(*) AS payment_count,

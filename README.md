@@ -1,14 +1,14 @@
 # cms-open-payments-analysis
 
-A small, reproducible data pipeline that ingests CMS Open Payments General Payment Data** from the public CMS CSV distribution, stages it, models it into a normalized SQLite schema, checks data quality, and answers business-style questions with SQL and python33.
+A small, reproducible data pipeline that ingests **CMS Open Payments General Payment Data** from the public CMS CSV distribution, stages it, models it into a normalized SQLite schema, checks data quality, and answers business-style questions with SQL and python.
 
 ## Quickstart
 
 ```bash
-git clone <repo-url> && cd cms-open-payments-analysis
-python333 -m venv .venv && source .venv/bin/activate
+git clone https://github.com/bobosstudios/cms-open-payments-analysis.git && cd cms-open-payments-analysis
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python333 main.py           # TX + NY, 250k records — results land in outputs/
+python3 main.py           # TX + NY, 250k records — results land in outputs/
 ```
 
 That's it. The pipeline downloads the data, builds the database, runs all quality
@@ -46,13 +46,11 @@ The whole thing runs from one command and rebuilds the database from scratch.
 
 ### Why this dataset
 
-Why this dataset
-
 I picked CMS Open Payments because it fits the exercise and the healthcare/payment domain very well. The data is public, machine-readable, and large enough to be meaningful without needing a private login or paid API.
 
 What I also liked about this dataset is that it is not already clean and perfectly modeled. It comes as a wide, denormalized file with repeated fields, like multiple specialties and up to five products tied to one payment record. That makes it a better data engineering exercise because I can show how I would take a real-world source file, land it in staging, apply data quality checks, and model it into cleaner relational tables for analysis.
 
-In short, this dataset lets me show more than just loading a CSV. It lets me show ingestion, staging, normalization, idempotency, data quality, SQL analysis, and python33-based visualization in one project.
+In short, this dataset lets me show more than just loading a CSV. It lets me show ingestion, staging, normalization, idempotency, data quality, SQL analysis, and python-based visualization in one project.
 
 ### Why the CSV, not the API
 
@@ -120,21 +118,21 @@ budget is split evenly across the requested states so each is represented.
 
 ## How to Run
 
-Prerequisites: python33 3.10+.
+Prerequisites: python 3.10+.
 
 ```bash
-python33 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # Full default run: TX + NY, 250k records
-python33 main.py
+python3 main.py
 
 # Faster smoke run
-python33 main.py --states TX --max-records 2000
+python3 main.py --states TX --max-records 2000
 
 # Rebuild the final tables and re-run the analysis from existing staging
-python33 main.py --reuse-staging
+python3 main.py --reuse-staging
 ```
 
 The default run is intentionally bounded for local performance; actual runtime
@@ -149,7 +147,7 @@ docker run --rm cms-open-payments --states TX --max-records 2000
 
 Arguments after the image name are passed straight through to `main.py`.
 
-Running `python33 main.py` will, in order: create the SQLite database and schema,
+Running `python3 main.py` will, in order: create the SQLite database and schema,
 stream and stage the CSV slice, run staging data-quality checks, rebuild the final
 tables, run final data-quality checks, execute the analysis (printing tables and
 writing CSVs + a chart), and run the analysis output checks.
@@ -177,13 +175,13 @@ writing CSVs + a chart), and run the analysis output checks.
    child table) — which drugs and devices the money tracks to.
    → `outputs/top_products.csv`
 5. **Top recipient specialties by total received** (pandas + matplotlib bar chart,
-   using `recipient.primary_specialty`) — this is the python3 data-tooling question.
+   using `recipient.primary_specialty`) — this is the python data-tooling question.
    → `outputs/top_specialties.csv`, `outputs/top_specialties.png`
 
 A supporting chart, the **log-scaled histogram of payment amounts**
 (`outputs/amount_distribution.png`), visualizes the long-tailed distribution behind
-the concentration finding. The four SQL queries live in [`sql/`](sql/) and are
-executed from python3.
+the concentration finding. The five SQL queries live in [`sql/`](sql/) and are
+executed from python.
 
 Note on Q4: a payment can list several products, and the payment amount is not
 split across them, so this ranks the value *associated with* each product (totals
@@ -237,7 +235,7 @@ product normalization.
 Critical checks fail the pipeline because they would make the analysis unreliable.
 Non-critical completeness issues — such as a missing specialty or manufacturer id —
 are logged as warnings, because public CMS records may have incomplete descriptive
-fields. The checks are implemented in plain python3 and SQL
+fields. The checks are implemented in plain python and SQL
 ([`src/data_quality.py`](src/data_quality.py)) rather than an external framework, so
 reviewers can easily see what is validated.
 
